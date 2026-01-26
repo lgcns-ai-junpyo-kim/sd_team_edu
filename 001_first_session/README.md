@@ -1,4 +1,4 @@
-# firstSession
+# firstsession
 
 이 프로젝트는 LangChain/LangGraph 입문자를 대상으로 한 **실전형 교육 코스**입니다.
 "LLM은 텍스트를 반환하는 도구"라는 관점을 중심으로, 프롬프트 설계부터 그래프 기반 처리까지 단계적으로 학습합니다.
@@ -13,7 +13,7 @@
 ## 학습 콘텐츠
 
 - 교재 문서: `docs/`
-- 코드 템플릿: `src/firstSession/`
+- 코드 템플릿: `src/firstsession/`
 - 번역 API 엔드포인트: `/api/v1/translate`
 
 ## 작성해야 하는 과제
@@ -36,16 +36,8 @@
 
 ## 실행 방법
 
-### 1) uvicorn CLI 방식
-
-```txt
-uv run uvicorn firstSession.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-### 2) 모듈 직접 실행 방식
-
-```txt
-uv run python -m firstSession.main
+```bash
+uv run uvicorn firstsession.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ## 기본 엔드포인트
@@ -55,9 +47,9 @@ uv run python -m firstSession.main
 
 ## 주요 위치
 
-- 애플리케이션 진입점: `src/firstSession/main.py`
-- API 영역: `src/firstSession/api`
-- Core 영역: `src/firstSession/core`
+- 애플리케이션 진입점: `src/firstsession/api/main.py`
+- API 영역: `src/firstsession/api`
+- Core 영역: `src/firstsession/core`
 
 ## 환경 설정
 
