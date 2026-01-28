@@ -19,7 +19,7 @@
   - 02_backend_service_layer: 토큰·메타데이터 스트리밍, Redis 큐, 엔드포인트 분리
   - 03_langgraph_checkpoint: 체크포인터 개요/원리/인메모리 구현
 - 코드 템플릿: `src/secondsession/`
-- 워커/큐 템플릿: `src/secondsession/worker/`, `src/secondsession/core/common/queue/`
+- 워커/큐 템플릿: `src/secondsession/core/worker/`, `src/secondsession/core/common/queue/`
 - 대화 API 엔드포인트: `/chat/*`
 
 ## 구현해야 하는 과제(핵심)
@@ -46,7 +46,7 @@
   - 작업 적재/소비 규칙(rpush/lpop, key 정책, 직렬화) 구현
 - `src/secondsession/core/common/queue/chat_stream_event_queue.py`
   - 스트리밍 이벤트 적재/소비 규칙(rpush/lpop, done 보장) 구현
-- `src/secondsession/worker/chat_worker.py`
+- `src/secondsession/core/worker/chat_worker.py`
   - 큐 소비 → 그래프 실행 → 이벤트 적재까지의 워커 실행 흐름 구현
 
 #### 2-1) Redis 키/페이로드 규칙(고정)
