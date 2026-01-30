@@ -23,4 +23,3 @@ class JobRequest(BaseModel):
     user_id: str | None = Field(default=None, description="요청 사용자 ID")
     metadata: dict[str, Any] | None = Field(default=None, description="추가 메타데이터")
     collection: str | None = Field(default=None, description="검색 컬렉션(선택)")
-    metadata_filter: dict[str, Any] | None = Field(default=None, description="메타데이터 필터(선택)")

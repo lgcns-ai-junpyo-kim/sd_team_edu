@@ -1,8 +1,6 @@
 # WSL Specific Files
-
-# AGENTS.md
-AGENTS.md
 *.Zone.Identifier
+
 # TMUX Specific Files
 tmux*
 # Byte-compiled / optimized / DLL files

@@ -6,7 +6,7 @@
 ## 교육 방향성
 
 - **한 작업-한 책임** 원칙으로 단계를 분리한다.
-- 검색 결과는 **정책 필터 → 정규화 → 병합 → 후처리**로 안정화한다.
+- 검색 결과는 **정규화 → 병합 → 후처리**로 안정화한다.
 - LangGraph를 사용해 **태스크 분리와 흐름 제어**를 구현한다.
 - 실패 응답은 **폴백/재시도 전략**으로 복구한다.
 
@@ -107,35 +107,15 @@ CREATE EXTENSION vector;
   - 리트리버/벡터 스토어 주입 구조 확장
   - 프롬프트/후처리/생성 단계 분리
 
-### 3) 검색/벡터 검색 구성 요소
+### 3) 검색/벡터 검색 로직(노드 내부 구현)
 
-- `src/thirdsession/core/rag/retrieval/document_model.py`
-  - 문서 유효성 검증 규칙 정의
-- `src/thirdsession/core/rag/retrieval/chunker.py`
-  - 청크 분할 기준/오버랩 규칙 구현
-- `src/thirdsession/core/rag/retrieval/embedding_service.py`
-  - 임베딩 API 호출 및 배치 처리 구현
-- `src/thirdsession/core/rag/retrieval/vector_repository.py`
-  - 저장/검색 쿼리 및 필터 구현
-- `src/thirdsession/core/rag/retrieval/search_service.py`
-  - 점수 임계값/중복 제거/정렬 규칙 구현
-- `src/thirdsession/core/rag/retrieval/score_normalizer.py`
-  - 거리 → 유사도 변환 및 정규화 구현
-- `src/thirdsession/core/rag/retrieval/metadata_filter.py`
-  - 권한/언어/버전 필터 규칙 구현
-- `src/thirdsession/core/rag/retrieval/filter_expression_builder.py`
-  - 필수/선택 조건 분리 및 표현식 구성
-- `src/thirdsession/core/rag/retrieval/metadata_schema_repository.py`
-  - 메타데이터 키/값 조회 로직 구현
-- `src/thirdsession/core/rag/retrieval/hybrid_fusion.py`
-  - 가중합/RRF/재정렬 결합 방식 구현
+- 검색 관련 로직은 `nodes` 내부에서 구현한다.
+- 대상 노드: `async_search_node.py`, `merge_node.py`, `hyde_node.py` (5번 참고)
 
 ### 4) 검색 전략 그래프 구성
 
 - `src/thirdsession/core/rag/graphs/query_decompose_graph.py`
   - 쿼리 분해 → 병렬 검색 → 병합 그래프 구성
-- `src/thirdsession/core/rag/graphs/search_verify_merge_graph.py`
-  - 검색 → 검증 → 병합 그래프 구성
 - `src/thirdsession/core/rag/graphs/adaptive_hyde_graph.py`
   - 적응형 HyDE 그래프 구성
 - `src/thirdsession/core/rag/graphs/rag_pipeline_graph.py`
@@ -145,22 +125,16 @@ CREATE EXTENSION vector;
 
 - `src/thirdsession/core/rag/nodes/query_decompose_node.py`
   - 질문 분해 LLM 호출 및 파싱
-- `src/thirdsession/core/rag/nodes/search_node.py`
-  - 리트리버 호출 및 예외 처리
 - `src/thirdsession/core/rag/nodes/async_search_node.py`
   - 비동기 병렬 검색 및 동시성 제한
-- `src/thirdsession/core/rag/nodes/verify_node.py`
-  - 검색 결과 검증 로직
 - `src/thirdsession/core/rag/nodes/hyde_node.py`
   - HyDE 생성 및 재검색 로직
 - `src/thirdsession/core/rag/nodes/merge_node.py`
   - 병합/정규화/중복 제거 규칙
 - `src/thirdsession/core/rag/nodes/postprocess_node.py`
-  - 후처리 파이프라인 호출
-- `src/thirdsession/core/rag/nodes/generate_node.py`
-  - 답변 생성 및 출력 포맷 규칙
+  - 후처리 로직 구현
 - `src/thirdsession/core/rag/nodes/stream_answer_node.py`
-  - 답변 스트리밍 규칙
+  - 답변 생성 및 스트리밍 규칙
 - `src/thirdsession/core/rag/nodes/stream_sources_node.py`
   - 근거 스트리밍 규칙
 - `src/thirdsession/core/rag/nodes/safeguard_node.py`
@@ -172,19 +146,14 @@ CREATE EXTENSION vector;
 
 - `src/thirdsession/core/rag/prompts/query_decompose_prompt.py`
   - 쿼리 분해 프롬프트 정의
-- `src/thirdsession/core/rag/prompts/verify_prompt.py`
-  - 검색 검증 프롬프트 정의
 - `src/thirdsession/core/rag/prompts/hyde_prompt.py`
   - HyDE 프롬프트 정의
 - `src/thirdsession/core/rag/prompts/answer_prompt.py`
   - 답변 생성 프롬프트 정의
 
-### 7) 후처리 구성(LLM 기반)
+### 7) 후처리 구성(노드 내부 구현)
 
-- `src/thirdsession/core/rag/postprocessing/postprocess_pipeline.py`
-  - 정책 필터/중복 제거/다양성/재정렬/압축 구현
-- `src/thirdsession/core/rag/postprocessing/llm_reranker.py`
-  - LLM 재정렬기 구현
+- 후처리는 `postprocess_node.py` 내부에서 구현한다. (5번 참고)
 
 ### 8) 에러/안전 정책 상수 정비
 
@@ -197,12 +166,90 @@ CREATE EXTENSION vector;
 
 ## 목표 플로우
 
-1) 검색 전략 선택/실행  
-2) 정책 기반 필터 적용  
+1) 쿼리 분해 및 서브쿼리 검색  
+2) 결과 없을 때 HyDE 재검색  
 3) 점수 정규화 및 결과 병합  
 4) 후처리(중복 제거/다양성/재정렬/압축)  
 5) 근거 기반 답변 생성  
 6) 스트리밍 응답(답변 → 근거 → done)  
+
+## 프로그램 동작
+
+아래 다이어그램은 **비동기 잡/스트리밍 구조**를 기준으로 전체 동작 흐름을 요약합니다.
+
+### 플로우차트
+
+```mermaid
+flowchart TD
+    A[클라이언트 요청] -->|POST /api/v1/chat/jobs| B[잡 생성 라우터]
+    B --> C[잡 서비스]
+    C --> D[잡 저장/상태 초기화]
+    C --> E[잡 큐 적재]
+    D --> F[잡 ID 응답]
+    E --> G[비동기 워커 루프]
+
+    G --> H[잡 소비]
+    H --> I[그래프 실행]
+    I --> J[쿼리 분해]
+    J --> K[서브쿼리 비동기 검색]
+    K --> L{검색 결과 존재?}
+    L -->|예| O[점수 정규화/병합]
+    L -->|아니오| M[HyDE 생성/재검색]
+    M --> O
+    O --> P[후처리 파이프라인]
+    P --> Q[답변 생성]
+    Q --> R[스트리밍 이벤트 큐 적재]
+
+    S[클라이언트 스트리밍 연결] -->|GET /api/v1/chat/stream/:job_id| T[스트리밍 라우터]
+    T --> U[스트리밍 서비스]
+    U --> V[이벤트 큐 소비]
+    V --> W[답변 이벤트]
+    V --> X[근거 이벤트]
+    V --> Y[done 이벤트]
+    W --> Z[클라이언트 수신]
+    X --> Z
+    Y --> Z
+```
+
+### 시퀀스 다이어그램
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as 클라이언트
+    participant R as 잡 라우터
+    participant S as 잡 서비스
+    participant Q as 잡 큐
+    participant W as 비동기 워커
+    participant G as RAG 그래프
+    participant E as 이벤트 큐
+    participant SR as 스트리밍 라우터
+
+    C->>R: POST /api/v1/chat/jobs (요청)
+    R->>S: 잡 생성
+    S->>S: 잡 상태 초기화/저장
+    S->>Q: 잡 적재
+    S-->>C: job_id 반환
+
+    W->>Q: 잡 소비
+    W->>G: 그래프 실행(비동기 노드 포함)
+    G->>G: 쿼리 분해
+    G->>G: 서브쿼리 비동기 검색
+    alt 검색 결과 존재
+        G->>G: 정규화/병합/후처리
+    else 검색 결과 없음
+        G->>G: HyDE 생성/재검색
+        G->>G: 정규화/병합/후처리
+    end
+    G->>G: 답변 생성
+    G->>E: 답변 이벤트 적재
+    G->>E: 근거 이벤트 적재
+    G->>E: done 이벤트 적재
+
+    C->>SR: GET /api/v1/chat/stream/{job_id}
+    SR->>E: 이벤트 소비
+    E-->>C: 답변 → 근거 → done (스트리밍)
+```
 
 ## 실행 방법
 

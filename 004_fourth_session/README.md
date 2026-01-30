@@ -129,18 +129,31 @@ flowchart TD
     A[앱 시작] --> B[main.py: 서비스 생성]
     B --> C[app.state에 서비스 저장]
     C --> D[router/register_routes 호출]
-    D --> E[HTTP 요청 수신: /api/v1/housing/agent]
-    E --> F[HousingAgentService.handle]
-    F --> G[HousingToolRegistry 등록]
-    G --> H[MCP 서버 Tool 등록]
-    H --> I[에이전트 그래프 빌드/컴파일]
-    I --> J[Plan 노드: 질문 분석/계획 생성]
-    J --> K[Validate 노드: 계획 검증]
-    K --> L[Execute 노드: Tool 호출]
-    L --> M[Tool 실행: HousingList/Stats]
-    M --> N[Merge 노드: 결과 합성]
-    N --> O[Feedback 노드: 종료 판단]
-    O --> P[응답 반환]
+    D --> E[HTTP 요청 수신: /api/v1/housing/jobs]
+    E --> F[HousingJobService.create_job]
+    F --> G[작업 저장소: InMemoryJobStore 저장]
+    F --> H[작업 큐: RedisJobQueue rpush]
+    H --> I[즉시 응답: job_id/status 반환]
+    D --> J[HTTP 요청 수신: /api/v1/housing/jobs/:job_id/status]
+    J --> K[HousingJobService.get_status]
+    K --> G
+    D --> L[HTTP 요청 수신: /api/v1/housing/jobs/:job_id/stream]
+    L --> M[HousingJobService.stream]
+    M --> N[스트림 큐: RedisStreamEventQueue lpop]
+
+    subgraph WORKER[비동기 처리: Worker 루프]
+        W1[HousingJobWorker.run] --> W2[RedisJobQueue lpop]
+        W2 --> W3[HousingAgentService.handle]
+        W3 --> W4[HousingToolRegistry 등록]
+        W4 --> W5[MCP 서버 Tool 등록]
+        W5 --> W6[에이전트 그래프 빌드/컴파일]
+        W6 --> W7[Plan/Validate/Execute]
+        W7 --> W8[Tool 실행: HousingList/Stats]
+        W8 --> W9[SQLite Repo 조회/통계]
+        W9 --> W10[Merge/Feedback]
+        W10 --> W11[작업 상태 갱신 + Stream 이벤트 적재]
+    end
+    H --> W1
 ```
 
 ### 2) 시퀀스 다이어그램
@@ -149,27 +162,55 @@ flowchart TD
 sequenceDiagram
     participant Client as 클라이언트
     participant API as FastAPI Router
-    participant Service as HousingAgentService
+    participant JobService as HousingJobService
+    participant JobStore as InMemoryJobStore
+    participant JobQueue as RedisJobQueue
+    participant Worker as HousingJobWorker
+    participant Agent as HousingAgentService
     participant Registry as HousingToolRegistry
     participant MCP as FastMCP
     participant Graph as LangGraph
     participant Tool as Housing Tools
     participant Repo as SQLite Repo
+    participant Stream as RedisStreamEventQueue
 
-    Client->>API: POST /api/v1/housing/agent
-    API->>Service: handle request
-    Service->>Registry: register_tools
-    Registry->>MCP: tool 등록
-    Service->>Graph: 그래프 빌드/컴파일
-    Graph->>Graph: Plan/Validate 실행
-    Graph->>Tool: Execute 단계 Tool 호출
-    Tool->>Repo: SQLite 조회/통계
-    Repo-->>Tool: 조회 결과
-    Tool-->>Graph: Tool 결과 반환
-    Graph->>Graph: Merge/Feedback 실행
-    Graph-->>Service: 최종 상태 반환
-    Service-->>API: 응답 매핑
-    API-->>Client: HousingAgentResponse
+    Client->>API: POST /api/v1/housing/jobs
+    API->>JobService: create_job(request)
+    JobService->>JobStore: create(job_id, payload)
+    JobService->>JobQueue: enqueue(payload)
+    JobService-->>API: job_id/status
+    API-->>Client: HousingJobResponse
+
+    loop 워커 폴링
+        Worker->>JobQueue: dequeue()
+        JobQueue-->>Worker: payload
+        Worker->>JobStore: status=RUNNING
+        Worker->>Agent: handle(payload)
+        Agent->>Registry: register_tools
+        Registry->>MCP: tool 등록
+        Agent->>Graph: 그래프 빌드/컴파일/실행
+        Graph->>Tool: Tool 호출
+        Tool->>Repo: SQLite 조회/통계
+        Repo-->>Tool: 조회 결과
+        Tool-->>Graph: Tool 결과 반환
+        Graph-->>Agent: 최종 상태 반환
+        Agent->>JobStore: status=COMPLETED
+        Agent->>Stream: push_event(progress/result)
+    end
+
+    Client->>API: GET /api/v1/housing/jobs/{job_id}/status
+    API->>JobService: get_status(job_id)
+    JobService->>JobStore: get(job_id)
+    JobStore-->>JobService: status
+    JobService-->>API: HousingJobStatusResponse
+    API-->>Client: status 응답
+
+    Client->>API: GET /api/v1/housing/jobs/{job_id}/stream
+    API->>JobService: stream(job_id)
+    JobService->>Stream: pop_event(job_id)
+    Stream-->>JobService: event
+    JobService-->>API: HousingJobStreamResponse
+    API-->>Client: stream event
 ```
 
 ## 구현 구성 요약

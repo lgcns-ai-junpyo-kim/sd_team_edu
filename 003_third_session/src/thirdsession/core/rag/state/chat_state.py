@@ -17,6 +17,13 @@ def add_history(existing: list[dict[str, Any]], incoming: list[dict[str, Any]] |
     return existing + incoming
 
 
+def set_summary(existing: str | None, incoming: str | None) -> str | None:
+    """요약 값을 갱신한다."""
+    if incoming is None:
+        return existing
+    return incoming
+
+
 def add_turn(existing: int, incoming: int | None) -> int:
     """턴 수를 누적한다."""
     if incoming is None:
@@ -43,7 +50,7 @@ class ChatState(TypedDict):
 
     question: str
     history: Annotated[list[dict[str, Any]], add_history]
-    summary: str | None
+    summary: Annotated[str | None, set_summary]
     turn_count: Annotated[int, add_turn]
     contexts: Annotated[list[Any], add_contexts]
     answer: str | None

@@ -1,7 +1,7 @@
 # 목적: 답변 생성 프롬프트를 제공한다.
 # 설명: 근거 기반 답변 규칙을 포함하며 싱글턴으로 관리한다.
 # 디자인 패턴: Singleton
-# 참조: thirdsession/core/rag/nodes/generate_node.py
+# 참조: thirdsession/core/rag/nodes/stream_answer_node.py
 
 """답변 생성 프롬프트 모듈."""
 
