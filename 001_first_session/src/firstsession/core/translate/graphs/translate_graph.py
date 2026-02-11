@@ -26,7 +26,7 @@ class TranslateGraph:
         """그래프를 초기화한다."""
         # 노드 인스턴스 초기화
         self.normalize = NormalizeInputNode()
-        self.savegaurd_classify = SafeguardClassifyNode()
+        self.safeguard_classify = SafeguardClassifyNode()
         self.safeguard_decision = SafeguardDecisionNode()
         self.safeguard_fail_response = SafeguardFailResponseNode()
         self.translate = TranslateNode()
@@ -77,15 +77,15 @@ class TranslateGraph:
         # - 함수형: graph.add_node("normalize", normalize_input)
         # - 클래스형: graph.add_node("normalize", self.normalize_input_node.run)
         #   - 클래스형은 무상태로 설계하고, 공유 데이터는 state에만 기록한다.
-        graph.add_node("normalize", self._node(self.normalize))
-        graph.add_node("safeguard_classify", self._node(self.safeguard_classify))
-        graph.add_node("safeguard_decision", self._node(self.safeguard_decision))
-        graph.add_node("safeguard_fail_response", self._node(self.safeguard_fail_response))
-        graph.add_node("translate", self._node(self.translate))
-        graph.add_node("quality_check", self._node(self.quality_check))
-        graph.add_node("retry_gate", self._node(self.retry_gate))
-        graph.add_node("retry_translate", self._node(self.retry_translate))
-        graph.add_node("response", self._node(self.response))
+        graph.add_node("normalize", self.normalize.run)
+        graph.add_node("safeguard_classify", self.safeguard_classify.run)
+        graph.add_node("safeguard_decision", self.safeguard_decision.run)
+        graph.add_node("safeguard_fail_response", self.safeguard_fail_response.run)
+        graph.add_node("translate", self.translate.run)
+        graph.add_node("quality_check", self.quality_check.run)
+        graph.add_node("retry_gate", self.retry_gate.run)
+        graph.add_node("retry_translate", self.retry_translate.run)
+        graph.add_node("response", self.response.run)
         # TODO: 다음 노드들을 추가하고 엣지를 연결한다.
         # - NormalizeInputNode: 입력 정규화
         # - SafeguardClassifyNode: PASS/PII/HARMFUL/PROMPT_INJECTION 판정
@@ -99,7 +99,7 @@ class TranslateGraph:
         graph.add_edge(START, "normalize")
         graph.add_edge("normalize", "safeguard_classify")
         graph.add_edge("safeguard_classify", "safeguard_decision")
-        graph.add_conditional_edge("safeguard_decision", self._route_after_safeguard{"translate":"translate", "safeguard_fail_response": "safeguard_fail_response"})
+        graph.add_conditional_edges("safeguard_decision", self._route_after_safeguard,{"translate":"translate", "safeguard_fail_response": "safeguard_fail_response",})
         graph.add_edge("safeguard_fail_response", "response")
         graph.add_edge("translate", "quality_check")
         graph.add_edge("quality_check", "retry_gate")
@@ -115,4 +115,4 @@ class TranslateGraph:
         #   - retry_count: 재시도 횟수
         #   - max_retry_count: 최대 재시도 횟수
         # - RetryGateNode에서 qc_passed가 NO이고 재시도 불가이면 ResponseNode -> END
-        print()
+        return graph
