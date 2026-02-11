@@ -11,6 +11,7 @@ from firstsession.api.translate.router.translate_router import TranslateRouter
 from firstsession.api.translate.service.translation_service import TranslationService
 from firstsession.core.translate.graphs.translate_graph import TranslateGraph
 
+from firstsession.config.settings import settings
 
 def create_app() -> FastAPI:
     """FastAPI 애플리케이션을 생성한다.
@@ -25,7 +26,8 @@ def create_app() -> FastAPI:
         """간단한 헬스 체크 엔드포인트."""
         return {"status": "ok"}
 
-    graph = TranslateGraph()
+    max_retry_count = settings.max_re
+    graph = TranslateGraph(max_retry_count=max_retry_count)
     service = TranslationService(graph)
     translate_router = TranslateRouter(service)
     app.include_router(translate_router.router)

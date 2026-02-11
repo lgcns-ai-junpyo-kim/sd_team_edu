@@ -19,7 +19,7 @@ class TranslationService:
         Args:
             graph: 번역 그래프 실행기.
         """
-        raise NotImplementedError("서비스 초기화 로직을 구현해야 합니다.")
+        self.graph = graph
 
     def translate(self, request: TranslationRequest) -> TranslationResponse:
         """번역 요청을 처리한다.
@@ -30,4 +30,5 @@ class TranslationService:
         Returns:
             TranslationResponse: 번역 결과 응답.
         """
+        print()
         raise NotImplementedError("번역 서비스 처리 로직을 구현해야 합니다.")

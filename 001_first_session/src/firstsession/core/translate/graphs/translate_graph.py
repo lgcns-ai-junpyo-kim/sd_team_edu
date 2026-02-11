@@ -5,17 +5,39 @@
 
 """번역 그래프 구성 모듈."""
 
-from langgraph.graph import END, StateGraph
+from langgraph.graph import START, END, StateGraph
 
 from firstsession.core.translate.state.translation_state import TranslationState
-
+# 노드 설정
+from firstsession.core.translate.nodes.normalize_input_node import NormalizeInputNode
+from firstsession.core.translate.nodes.safeguard_classify_node import SafeguardClassifyNode
+from firstsession.core.translate.nodes.safeguard_decision_node import SafeguardDecisionNode
+from firstsession.core.translate.nodes.safeguard_fail_response_node import SafeguardFailResponseNode
+from firstsession.core.translate.nodes.translate_node import TranslateNode
+from firstsession.core.translate.nodes.quality_check_node import QualityCheckNode
+from firstsession.core.translate.nodes.retry_gate_node import RetryGateNode
+from firstsession.core.translate.nodes.retry_translate_node import RetryTranslateNode
+from firstsession.core.translate.nodes.response_node import ResponseNode
 
 class TranslateGraph:
     """번역 그래프 실행기."""
 
-    def __init__(self) -> None:
+    def __init__(self, max_retry_count: int = 1) -> None:
         """그래프를 초기화한다."""
-        raise NotImplementedError("번역 그래프 초기화 로직을 구현해야 합니다.")
+        # 노드 인스턴스 초기화
+        self.normalize = NormalizeInputNode()
+        self.savegaurd_classify = SafeguardClassifyNode()
+        self.safeguard_decision = SafeguardDecisionNode()
+        self.safeguard_fail_response = SafeguardFailResponseNode()
+        self.translate = TranslateNode()
+        self.quality_check = QualityCheckNode()
+        self.retry_gate = RetryGateNode()
+        self.retry_translate = RetryTranslateNode()
+        self.response = ResponseNode()
+        self.max_retry_count = max_retry_count
+        # 그래프 초기화
+        graph = self._build_graph()
+        self._compiled = graph.compile()
 
     def run(self, state: TranslationState) -> TranslationState:
         """번역 그래프를 실행한다.
@@ -26,7 +48,21 @@ class TranslateGraph:
         Returns:
             TranslationState: 번역 결과 상태.
         """
-        raise NotImplementedError("번역 그래프 실행 로직을 구현해야 합니다.")
+        if state is None:
+            raise ValueError('state는 None일 수 없습니다. 다시 확인해야 합니다.')
+        result = self._compiled.invoke(state)
+        return result
+
+    def _route_after_safeguard(state: TranslationState) -> str:
+        label = state.get("safeguard_label", "")
+        return "translate" if label == "PASS" else "safeguard_fail_response"
+
+    def _route_after_retry_gate(state: TranslationState, MAX_RETRY_COUNT) -> str:
+        qc = state.get("qc_passed", "")
+        if qc == "YES":
+            return "response"
+        retry_count = int(state.get("retry_count",0) or 0)
+        return "retry_translate" if retry_count < MAX_RETRY_COUNT else "response"
 
     def _build_graph(self) -> StateGraph:
         """번역 그래프를 구성한다.
@@ -34,13 +70,22 @@ class TranslateGraph:
         Returns:
             StateGraph: 구성된 그래프.
         """
-
         # TODO: START 노드에서 시작하는 흐름을 명시한다.
         # - START -> NormalizeInputNode
+        graph = StateGraph(TranslationState)
         # TODO: 노드 등록 방식은 두 가지 모두 가능하다.
         # - 함수형: graph.add_node("normalize", normalize_input)
         # - 클래스형: graph.add_node("normalize", self.normalize_input_node.run)
         #   - 클래스형은 무상태로 설계하고, 공유 데이터는 state에만 기록한다.
+        graph.add_node("normalize", self._node(self.normalize))
+        graph.add_node("safeguard_classify", self._node(self.safeguard_classify))
+        graph.add_node("safeguard_decision", self._node(self.safeguard_decision))
+        graph.add_node("safeguard_fail_response", self._node(self.safeguard_fail_response))
+        graph.add_node("translate", self._node(self.translate))
+        graph.add_node("quality_check", self._node(self.quality_check))
+        graph.add_node("retry_gate", self._node(self.retry_gate))
+        graph.add_node("retry_translate", self._node(self.retry_translate))
+        graph.add_node("response", self._node(self.response))
         # TODO: 다음 노드들을 추가하고 엣지를 연결한다.
         # - NormalizeInputNode: 입력 정규화
         # - SafeguardClassifyNode: PASS/PII/HARMFUL/PROMPT_INJECTION 판정
@@ -51,7 +96,13 @@ class TranslateGraph:
         # - RetryGateNode: 재번역 가능 여부 판단
         # - RetryTranslateNode: 재번역 수행
         # - ResponseNode: 최종 응답 구성
-
+        graph.add_edge(START, "normalize")
+        graph.add_edge("normalize", "safeguard_classify")
+        graph.add_edge("safeguard_classify", "safeguard_decision")
+        graph.add_conditional_edge("safeguard_decision", self._route_after_safeguard{"translate":"translate", "safeguard_fail_response": "safeguard_fail_response"})
+        graph.add_edge("safeguard_fail_response", "response")
+        graph.add_edge("translate", "quality_check")
+        graph.add_edge("quality_check", "retry_gate")
         # TODO: 조건부 엣지 설계(구체 경로 예시)
         # - NormalizeInputNode -> SafeguardClassifyNode -> SafeguardDecisionNode
         # - SafeguardDecisionNode에서 PASS가 아니면 SafeguardFailResponseNode -> ResponseNode -> END
@@ -64,5 +115,4 @@ class TranslateGraph:
         #   - retry_count: 재시도 횟수
         #   - max_retry_count: 최대 재시도 횟수
         # - RetryGateNode에서 qc_passed가 NO이고 재시도 불가이면 ResponseNode -> END
-        
-        raise NotImplementedError("번역 그래프 구성 로직을 구현해야 합니다.")
+        print()
