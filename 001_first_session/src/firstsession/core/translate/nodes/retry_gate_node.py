@@ -10,6 +10,8 @@ from firstsession.core.translate.state.translation_state import TranslationState
 
 class RetryGateNode:
     """재번역 가능 여부를 판단하는 노드."""
+    def __init__(self, max_retry_count: int) -> None:
+        self.max_retry_count = max_retry_count
 
     def run(self, state: TranslationState) -> TranslationState:
         """재번역 가능 여부를 판단한다.
@@ -22,4 +24,13 @@ class RetryGateNode:
         """
         # TODO: retry_count와 max_retry_count 기준으로 재번역 여부를 판단한다.
         # TODO: qc_passed 결과에 따른 분기 규칙을 정의한다.
-        raise NotImplementedError("재번역 게이트 로직을 구현해야 합니다.")
+        retry_count = int(state.get("retry_count", 0) or 0)
+        qc_passed = state.get("qc_passed", "NO")
+        # QC가 통과하면 재시도 불필요
+        if qc_passed == "YES":
+            state["can_retry"] = False
+            return state
+
+        # 재시도 가능 여부 계산
+        state["can_retry"] = retry_count < self.max_retry_count
+        return state

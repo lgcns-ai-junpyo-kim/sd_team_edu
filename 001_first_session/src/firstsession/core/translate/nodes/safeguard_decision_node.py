@@ -6,7 +6,15 @@
 """안전 분류 결정 노드 모듈."""
 
 from firstsession.core.translate.state.translation_state import TranslationState
+from enum import Enum
 
+class SafeguardMessage(Enum):
+    """안전 분류 파싱 오류 메시지."""
+
+    PII = "개인정보가 포함된 요청으로 차단되었습니다."
+    HARMFUL = "유해한 콘텐츠 요청으로 차단되었습니다."
+    PROMPT_INJECTION = "프롬프트 인젝션 시도로 차단되었습니다."
+    UNKNOWN = "안전 정책에 의해 요청이 차단되었습니다."
 
 class SafeguardDecisionNode:
     """안전 분류 결정을 담당하는 노드."""
@@ -22,4 +30,16 @@ class SafeguardDecisionNode:
         """
         # TODO: PASS 여부를 확인하고 error_message를 설정한다.
         # TODO: SafeguardMessage Enum과의 매핑 규칙을 정의한다.
-        raise NotImplementedError("안전 분류 결정 로직을 구현해야 합니다.")
+        label = state.get("safeguard_label", "UNKNOWN")
+
+        if label == "PASS":
+            return state
+        
+        try:
+            error_enum = SafeguardMessage[label]
+            state["error"] = error_enum.value
+        except KeyError:
+            # 정의되지 않은 라벨일 경우
+            state["error"] = SafeguardMessage.UNKNOWN.value
+
+        return state

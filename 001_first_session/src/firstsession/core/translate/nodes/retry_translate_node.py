@@ -22,4 +22,11 @@ class RetryTranslateNode:
         """
         # TODO: 재번역 프롬프트로 품질 개선 번역을 수행한다.
         # TODO: 재번역 결과와 재시도 횟수를 갱신한다.
-        raise NotImplementedError("재번역 로직을 구현해야 합니다.")
+        # 재시도 횟수 갱신
+        retry_count = int(state.get("retry_count", 0) or 0)
+        state["retry_count"] = retry_count + 1
+        # 재번역 수행
+        translated = self._translate_again(state)
+        state["translated_text"] = translated
+
+        return state

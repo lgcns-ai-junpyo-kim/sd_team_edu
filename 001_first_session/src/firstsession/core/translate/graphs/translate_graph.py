@@ -31,10 +31,9 @@ class TranslateGraph:
         self.safeguard_fail_response = SafeguardFailResponseNode()
         self.translate = TranslateNode()
         self.quality_check = QualityCheckNode()
-        self.retry_gate = RetryGateNode()
+        self.retry_gate = RetryGateNode(max_retry_count=max_retry_count)
         self.retry_translate = RetryTranslateNode()
         self.response = ResponseNode()
-        self.max_retry_count = max_retry_count
         # 그래프 초기화
         graph = self._build_graph()
         self._compiled = graph.compile()
@@ -53,16 +52,21 @@ class TranslateGraph:
         result = self._compiled.invoke(state)
         return result
 
-    def _route_after_safeguard(state: TranslationState) -> str:
-        label = state.get("safeguard_label", "")
-        return "translate" if label == "PASS" else "safeguard_fail_response"
+    def _route_after_safeguard(self, state: TranslationState) -> str:
+        if state.get("safeguard_label") == "PASS":
+            return "translate"
+        else:
+            return "safeguard_fail_response"
 
-    def _route_after_retry_gate(state: TranslationState, MAX_RETRY_COUNT) -> str:
-        qc = state.get("qc_passed", "")
-        if qc == "YES":
+    def _route_after_retry_gate(self, state: TranslationState) -> str:
+        # QC passed 기준으로 분기 처리
+        if state.get('qc_passed') == "YES":
             return "response"
-        retry_count = int(state.get("retry_count",0) or 0)
-        return "retry_translate" if retry_count < MAX_RETRY_COUNT else "response"
+        else:
+            if state.get("can_retry"):
+                return "retry_translate"
+            else:
+                return "response"
 
     def _build_graph(self) -> StateGraph:
         """번역 그래프를 구성한다.
@@ -99,10 +103,13 @@ class TranslateGraph:
         graph.add_edge(START, "normalize")
         graph.add_edge("normalize", "safeguard_classify")
         graph.add_edge("safeguard_classify", "safeguard_decision")
-        graph.add_conditional_edges("safeguard_decision", self._route_after_safeguard,{"translate":"translate", "safeguard_fail_response": "safeguard_fail_response",})
+        graph.add_conditional_edges("safeguard_decision", self._route_after_safeguard,{"translate":"translate", "safeguard_fail_response": "safeguard_fail_response",}) # safeguard 분기 처리
         graph.add_edge("safeguard_fail_response", "response")
         graph.add_edge("translate", "quality_check")
         graph.add_edge("quality_check", "retry_gate")
+        graph.add_conditional_edges("retry_gate", self._route_after_retry_gate,{"retry_translate":"retry_translate", "response": "response",}) # retry_gate 분기 처리
+        graph.add_edge("retry_translate", "quality_check")
+        graph.add_edge("response", END)
         # TODO: 조건부 엣지 설계(구체 경로 예시)
         # - NormalizeInputNode -> SafeguardClassifyNode -> SafeguardDecisionNode
         # - SafeguardDecisionNode에서 PASS가 아니면 SafeguardFailResponseNode -> ResponseNode -> END
