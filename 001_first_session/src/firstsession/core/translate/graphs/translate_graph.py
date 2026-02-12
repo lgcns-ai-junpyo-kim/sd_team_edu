@@ -22,7 +22,7 @@ from firstsession.core.translate.nodes.response_node import ResponseNode
 class TranslateGraph:
     """번역 그래프 실행기."""
 
-    def __init__(self, max_retry_count: int = 1) -> None:
+    def __init__(self) -> None:
         """그래프를 초기화한다."""
         # 노드 인스턴스 초기화
         self.normalize = NormalizeInputNode()
@@ -31,7 +31,7 @@ class TranslateGraph:
         self.safeguard_fail_response = SafeguardFailResponseNode()
         self.translate = TranslateNode()
         self.quality_check = QualityCheckNode()
-        self.retry_gate = RetryGateNode(max_retry_count=max_retry_count)
+        self.retry_gate = RetryGateNode()
         self.retry_translate = RetryTranslateNode()
         self.response = ResponseNode()
         # 그래프 초기화

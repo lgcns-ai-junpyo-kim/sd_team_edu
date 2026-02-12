@@ -10,8 +10,8 @@ from firstsession.core.translate.state.translation_state import TranslationState
 
 class RetryGateNode:
     """재번역 가능 여부를 판단하는 노드."""
-    def __init__(self, max_retry_count: int) -> None:
-        self.max_retry_count = max_retry_count
+    def __init__(self) -> None:
+        self = self
 
     def run(self, state: TranslationState) -> TranslationState:
         """재번역 가능 여부를 판단한다.
@@ -32,5 +32,6 @@ class RetryGateNode:
             return state
 
         # 재시도 가능 여부 계산
-        state["can_retry"] = retry_count < self.max_retry_count
+        max_retry_count = int(state['max_retry_count'])
+        state["can_retry"] = retry_count < max_retry_count
         return state

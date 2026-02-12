@@ -26,11 +26,9 @@ def create_app() -> FastAPI:
         """간단한 헬스 체크 엔드포인트."""
         return {"status": "ok"}
 
-    # argument 받아오기
-    max_retry_count = settings.translate.max_retry_count
     # graph 생성
-    graph = TranslateGraph(max_retry_count=max_retry_count)
-    service = TranslationService(graph)
+    graph = TranslateGraph()
+    service = TranslationService(graph, settings=settings)
     translate_router = TranslateRouter(service)
     app.include_router(translate_router.router)
 

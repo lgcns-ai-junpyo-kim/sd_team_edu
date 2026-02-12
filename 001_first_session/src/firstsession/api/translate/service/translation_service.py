@@ -4,22 +4,24 @@
 # 참조: firstsession/api/translate/router/translate_router.py
 
 """번역 서비스 모듈."""
-
+from firstsession.config.settings import Settings
 from firstsession.api.translate.model.translation_request import TranslationRequest
 from firstsession.api.translate.model.translation_response import TranslationResponse
 from firstsession.core.translate.graphs.translate_graph import TranslateGraph
+from firstsession.core.translate.state.translation_state import TranslationState
 
 
 class TranslationService:
     """번역 요청을 처리하는 서비스."""
 
-    def __init__(self, graph: TranslateGraph) -> None:
+    def __init__(self, graph: TranslateGraph, settings: Settings) -> None:
         """서비스 의존성을 초기화한다.
 
         Args:
             graph: 번역 그래프 실행기.
         """
         self.graph = graph
+        self.settings = settings
 
     def translate(self, request: TranslationRequest) -> TranslationResponse:
         """번역 요청을 처리한다.
@@ -30,5 +32,27 @@ class TranslationService:
         Returns:
             TranslationResponse: 번역 결과 응답.
         """
-        print()
-        raise NotImplementedError("번역 서비스 처리 로직을 구현해야 합니다.")
+        state: TranslationState = {
+            "source_language": request.source_language,
+            "target_language": request.target_language,
+            "text": request.text,
+            "normalized_text": "",
+
+            "safeguard_label": "PASS",
+            "safeguard_error": "",
+
+            "translated_text": "",
+
+            "qc_passed": "NO",
+            "can_retry": False,
+            "retry_count": 0,
+
+            "max_input_length": self.settings.normalize.max_input_length,
+            "max_retry_count": self.settings.translate.max_retry_count,
+
+            "error": "",
+        }
+        # 그래프 실행
+        result_state = self.graph.run(state)
+        
+        return result_state

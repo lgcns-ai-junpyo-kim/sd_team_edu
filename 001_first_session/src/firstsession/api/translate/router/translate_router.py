@@ -5,8 +5,7 @@
 
 """번역 API 라우터 모듈."""
 
-from fastapi import APIRouter
-
+from fastapi import APIRouter, HTTPException, status
 from firstsession.api.translate.const.api import (
     API_V1_PREFIX,
     TRANSLATE_PREFIX,
@@ -48,5 +47,5 @@ class TranslateRouter:
         Returns:
             TranslationResponse: 번역 결과.
         """
-        print()
-        return self.service.translate(request=request)
+        result = self.service.translate(request)
+        return result
