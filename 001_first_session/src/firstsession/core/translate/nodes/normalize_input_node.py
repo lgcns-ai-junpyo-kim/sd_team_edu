@@ -10,9 +10,6 @@ import re
 
 class NormalizeInputNode:
     """입력 정규화를 담당하는 노드."""
-    def __init__(self) -> None:
-        self = self
-
     def _normalize_lang(self, lang: str) -> str:
         """언어 코드 표준화"""
         if not lang:
@@ -41,7 +38,7 @@ class NormalizeInputNode:
             return text
         return text[:max_input_length]
 
-    def run(self, max_input_length: int, state: TranslationState) -> TranslationState:
+    def run(self, state: TranslationState) -> TranslationState:
         """입력 데이터를 정규화한다.
 
         Args:

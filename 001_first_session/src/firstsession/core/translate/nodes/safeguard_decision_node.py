@@ -32,7 +32,7 @@ class SafeguardDecisionNode:
         # TODO: SafeguardMessage Enum과의 매핑 규칙을 정의한다.
         label = state.get("safeguard_label", "UNKNOWN")
 
-        if label == "PASS":
+        if label == "SAFE":
             return state
         
         try:

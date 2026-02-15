@@ -53,7 +53,7 @@ class TranslateGraph:
         return result
 
     def _route_after_safeguard(self, state: TranslationState) -> str:
-        if state.get("safeguard_label") == "PASS":
+        if state.get("safeguard_label") == "SAFE":
             return "translate"
         else:
             return "safeguard_fail_response"
