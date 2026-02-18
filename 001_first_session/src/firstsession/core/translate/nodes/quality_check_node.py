@@ -22,10 +22,10 @@ class QualityCheckNode:
     def __init__(self) -> None:
         self.call_model_node = CallModelNode()
 
-    def _parse_yes_no(self, text: str) -> YesNoRoute:
-        if text is None:
+    def _parse_yes_no(self, raw_text: str) -> YesNoRoute:
+        if raw_text is None:
             return YesNoRoute.UNKNOWN
-        text = str(text).strip().upper()
+        text = str(raw_text).strip().upper()
         if text == "YES":
             return YesNoRoute.YES
         if text == "NO":

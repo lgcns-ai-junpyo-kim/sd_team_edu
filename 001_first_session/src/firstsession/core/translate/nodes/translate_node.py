@@ -6,7 +6,7 @@
 """번역 수행 노드 모듈."""
 
 from firstsession.core.translate.state.translation_state import TranslationState
-
+from firstsession.core.translate.prompts.translation_prompt import TRANSLATION_PROMPT
 
 class TranslateNode:
     """번역 수행을 담당하는 노드."""
@@ -25,5 +25,5 @@ class TranslateNode:
         source_language = state.get("source_language", "")
         target_language = state.get("target_language", "")
         normalized_text = state.get("normalized_text", "")
-        
+
         raise NotImplementedError("번역 수행 로직을 구현해야 합니다.")
