@@ -97,8 +97,8 @@ class SafeguardClassifyNode:
         """
         # TODO: 안전 분류 프롬프트를 호출하고 PASS/PII/HARMFUL/PROMPT_INJECTION을 산출한다.
         # TODO: 출력 검증 및 정규화 규칙을 정의한다.
-        text = state.get("text", "")
-        raw_output = self._classification(text)
+        normalized_text = state.get("normalized_text", "")
+        raw_output = self._classification(normalized_text)
         label, error = self.router.parse(raw_output)
         
         if error != SafeguardError.NONE:
