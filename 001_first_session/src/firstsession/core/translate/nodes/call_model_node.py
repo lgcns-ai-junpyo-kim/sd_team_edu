@@ -7,8 +7,9 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from firstsession.core.translate.state.translation_state import TranslationState
 import google.generativeai as genai
+
+from firstsession.core.translate.state.translation_state import TranslationState
 
 @dataclass(frozen=True)
 class CallModelConfig:

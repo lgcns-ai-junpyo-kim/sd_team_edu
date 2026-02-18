@@ -4,43 +4,38 @@
 # 참조: docs/04_string_tricks/01_yes_no_파서.md
 
 """번역 품질 검사 노드 모듈."""
+import re
+from enum import Enum
 
 from firstsession.core.translate.state.translation_state import TranslationState
-import re
+from firstsession.core.translate.prompts.quality_check_prompt import QUALITY_CHECK_PROMPT
+from firstsession.core.translate.nodes.call_model_node import CallModelNode
+
+class YesNoRoute(Enum):
+    """Yes/No 라우팅 값"""
+    YES = "YES"
+    NO = "NO"
+    UNKNOWN = "UNKNOWN"
 
 class QualityCheckNode:
     """번역 품질 검사를 담당하는 노드."""
     def __init__(self) -> None:
-        self.prompt_patterns = [
-            r"translation:",
-            r"output:",
-            r"result:"
-        ]
-        self.number_patterns = [
-            r"\b\d+(?:\.\d+)?%?\b", # 숫자 패턴
-            r"https?://[^\s]+", # URL 패턴
-        ]
+        self.call_model_node = CallModelNode()
 
-    def _check_prompt_patterns(self, translated: str) -> bool:
-        """번역 결과에 시스템 프롬프트가 포함되는지 탐지"""
-        translated = translated.lower()
-        for pattern in self.prompt_patterns:
-            if re.search(pattern, translated):
-                return False
-        return True
-
-    def _check_number_patterns(self, source: str, translated: str) -> bool:
-        """원문과 번역문의 숫자 정보 일치 여부 탐지"""
-        for pattern in self.number_patterns:
-            src_tokens = re.findall(pattern, source)
-            tgt_tokens = re.findall(pattern, translated)
-            # 숫자 데이터 총 수 일치 여부
-            if len(src_tokens) != len(tgt_tokens):
-                return False
-            # 값 일치 여부
-            if sorted(src_tokens) != sorted(tgt_tokens):
-                return False
-        return True        
+    def _parse_yes_no(self, text: str) -> YesNoRoute:
+        if text is None:
+            return YesNoRoute.UNKNOWN
+        text = str(text).strip().upper()
+        if text == "YES":
+            return YesNoRoute.YES
+        if text == "NO":
+            return YesNoRoute.NO
+        first = re.split(r"\s+", text)[0] if text else ""
+        if first.startswith("YES"):
+            return YesNoRoute.YES
+        if first.startswith("NO"):
+            return YesNoRoute.NO
+        return YesNoRoute.UNKNOWN
 
     def run(self, state: TranslationState) -> TranslationState:
         """번역 품질을 검사한다.
@@ -55,20 +50,20 @@ class QualityCheckNode:
         # TODO: 결과를 qc_passed 필드에 기록하는 규칙을 정의한다.
         normalized_text = state.get("normalized_text", "")
         translated_text = state.get("translated_text","")
-        if normalized_text is None or translated_text is None:
+        if not normalized_text or not translated_text:
             state["error"] = "품질 검사를 할 텍스트가 비어 있습니다."
             state["qc_passed"] = "NO"
             return state
 
-        if self._check_prompt_patterns(translated_text) is False:
-            state["error"] = "번역 결과에 프롬프트가 포함되어 있습니다."
+        prompt = QUALITY_CHECK_PROMPT.format(source_text=str(normalized_text), translated_text=str(translated_text))
+        output = self.call_model_node(prompt)
+        route = self._parse_yes_no(output)
+        if route == YesNoRoute.YES:
+            state["qc_passed"] = "YES"
+        elif route == YesNoRoute.NO:
+            state["error"] = "품질 검사를 통과하지 못했습니다."
             state["qc_passed"] = "NO"
-            return state
-
-        if self._check_number_patterns(normalized_text, translated_text) is False:
-            state["error"] = "변역 결과에 누락된 숫자 데이터가 포함되어 있습니다."
+        else:
+            state["error"] = "품질 검사 결과를 확인할 수 없습니다."
             state["qc_passed"] = "NO"
-            return state
-        
-        state["qc_passed"] = "YES"
         return state

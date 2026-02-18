@@ -30,7 +30,6 @@ class NormalizeInputNode:
         text = text.strip()
         text = re.sub(r"\n{2,}", "\n", text) # 줄바꿈 정리
         text = re.sub(r"\s+", " ", text) # 공백 정리
-    
         return text
 
     def _limit_length(self, max_input_length: int, text: str) -> str:

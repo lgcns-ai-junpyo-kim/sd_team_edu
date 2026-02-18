@@ -22,4 +22,8 @@ class TranslateNode:
         """
         # TODO: 번역 프롬프트를 구성하고 모델/외부 API를 호출한다.
         # TODO: 번역 결과를 상태에 기록하는 규칙을 정의한다.
+        source_language = state.get("source_language", "")
+        target_language = state.get("target_language", "")
+        normalized_text = state.get("normalized_text", "")
+        
         raise NotImplementedError("번역 수행 로직을 구현해야 합니다.")
