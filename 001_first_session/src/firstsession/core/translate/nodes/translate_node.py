@@ -7,9 +7,12 @@
 
 from firstsession.core.translate.state.translation_state import TranslationState
 from firstsession.core.translate.prompts.translation_prompt import TRANSLATION_PROMPT
+from firstsession.core.translate.nodes.call_model_node import CallModelNode
 
 class TranslateNode:
     """번역 수행을 담당하는 노드."""
+    def __init__(self) -> None:
+        self.call_model_node = CallModelNode()
 
     def run(self, state: TranslationState) -> TranslationState:
         """번역 결과를 생성한다.
@@ -26,4 +29,35 @@ class TranslateNode:
         target_language = state.get("target_language", "")
         normalized_text = state.get("normalized_text", "")
 
-        raise NotImplementedError("번역 수행 로직을 구현해야 합니다.")
+        if not source_language or not target_language:
+            state["error"] = "번역작업을 위한 언어가 설정되어있지 않습니다."
+            state["translated_text"] = ""
+            return state
+
+        if not normalized_text:
+            state["error"] = "번역작업을 수행 할 텍스트가 비어 있습니다."
+            state["translated_text"] = ""
+            return state
+        
+        prompt = TRANSLATION_PROMPT.format(
+            source_language = str(source_language),
+            target_language = str(target_language),
+            text = str(normalized_text)
+        )
+
+        state["prompt"] = prompt
+        output = self.call_model_node(state)
+        if output is None:
+            state["error"] = "번역 모델 응답이 비어있습니다."
+            state["translated_text"] = ""
+            return state
+
+        translated_text = str(output).strip()
+        if not translated_text:
+            state["error"] = "번역 결과가 비어있습니다."
+            state["translated_text"] = ""
+            return state
+
+        state["translated_text"] = translated_text
+        state.pop("error", None)
+        return state

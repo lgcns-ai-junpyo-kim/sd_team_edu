@@ -25,9 +25,9 @@ class CallModelNode:
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(self.config.model_name)
 
-    def _call_model(self, text: str) -> str:
+    def _call_model(self, prompt: str) -> str:
         response = self.model.generate_content(
-            text,
+            prompt,
             generation_config={
                 "temperature": self.config.temperature,
             },
@@ -46,26 +46,24 @@ class CallModelNode:
         """
         # TODO: 모델 호출 인터페이스와 에러 처리 규칙을 구현한다.
         # TODO: 응답 텍스트 파싱 및 정규화 규칙을 정의한다.
-        text = state.get("normalized_text").strip() or state.get("text").strip() or ""
-        
-        if not text:
-            state["error"] = "번역할 텍스트가 비어 있습니다."
+        prompt = state.get("prompt")
+        if not prompt or not str(prompt).strip():
+            state["error"] = "모델에 전달할 텍스트가 비어 있습니다."
             state["translated_text"] = ""
             return state
     
         try:
-            translated_text = self._call_model(
-                text=text,
-                model_name=self.config.model_name,
-                temperature=self.config.temperature,
-                timeout=self.config.timeout,
-            )
-
-            state["translated_text"] = translated_text.strip()
+            output = self._call_model(str(prompt))
+            if not output:
+                state["error"] = "모델 응답이 비어있습니다."
+                state["translated_text"] = ""
+                return state
+            
+            state["translated_text"] = output
+            state.pop("error", None)
             return state
 
         except Exception as e:
             state["error"] = f"모델 호출 실패: {e}"
             state["translated_text"] = ""
             return state
-

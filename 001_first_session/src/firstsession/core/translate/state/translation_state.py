@@ -11,16 +11,21 @@ from typing import TypedDict
 class TranslationState(TypedDict):
     """번역 처리에 필요한 상태 데이터."""
 
+    # 언어설정
     source_language: str
     target_language: str
+    # 입력
     text: str
     normalized_text: str
+    translated_text: str
+    prompt: str
+    # 분기 처리
     safeguard_label: str
     safeguard_error: str
-    translated_text: str
     qc_passed: str
     can_retry: bool
     retry_count: int
+    # 설정
     max_input_length: int
     max_retry_count: int
     error: str

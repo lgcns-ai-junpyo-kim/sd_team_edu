@@ -71,7 +71,8 @@ class SafeguardClassifyNode:
             return state
         
         prompt = SAFEGUARD_PROMPT.format(user_input=str(normalized_text))
-        output = self.call_model_node(prompt)
+        state["prompt"] = prompt
+        output = self.call_model_node(state)
         label, error = self.router.parse(output)
         
         if error != SafeguardError.NONE:
