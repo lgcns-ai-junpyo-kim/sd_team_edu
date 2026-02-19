@@ -19,6 +19,8 @@ class TranslationState(TypedDict):
     normalized_text: str
     translated_text: str
     prompt: str
+    # 출력
+    model_output: str
     # 분기 처리
     safeguard_label: str
     safeguard_error: str

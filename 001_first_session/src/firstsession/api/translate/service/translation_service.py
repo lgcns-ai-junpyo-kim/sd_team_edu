@@ -36,12 +36,13 @@ class TranslationService:
             "source_language": request.source_language,
             "target_language": request.target_language,
             "text": request.text,
+
+            "prompt": "",
             "normalized_text": "",
+            "translated_text": "",
 
             "safeguard_label": "PASS",
             "safeguard_error": "",
-
-            "translated_text": "",
 
             "qc_passed": "NO",
             "can_retry": False,

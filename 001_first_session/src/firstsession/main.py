@@ -6,12 +6,13 @@
 """FastAPI 애플리케이션 진입점 모듈."""
 
 from fastapi import FastAPI
-
 from firstsession.config.settings import settings
 from firstsession.api.translate.router.translate_router import TranslateRouter
 from firstsession.api.translate.service.translation_service import TranslationService
 from firstsession.core.translate.graphs.translate_graph import TranslateGraph
 
+from dotenv import load_dotenv
+load_dotenv()
 
 def create_app() -> FastAPI:
     """FastAPI 애플리케이션을 생성한다.

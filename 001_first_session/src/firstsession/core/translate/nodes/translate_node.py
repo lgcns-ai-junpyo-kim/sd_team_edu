@@ -46,7 +46,8 @@ class TranslateNode:
         )
 
         state["prompt"] = prompt
-        output = self.call_model_node(state)
+        state = self.call_model_node.run(state)
+        output = state.get("model_output", "")
         if output is None:
             state["error"] = "번역 모델 응답이 비어있습니다."
             state["translated_text"] = ""

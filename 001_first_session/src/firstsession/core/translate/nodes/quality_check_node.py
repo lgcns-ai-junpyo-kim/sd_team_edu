@@ -57,7 +57,8 @@ class QualityCheckNode:
 
         prompt = QUALITY_CHECK_PROMPT.format(source_text=str(normalized_text), translated_text=str(translated_text))
         state["prompt"] = prompt
-        output = self.call_model_node(state)
+        state = self.call_model_node.run(state)
+        output = state.get("model_output","")
         route = self._parse_yes_no(output)
         if route == YesNoRoute.YES:
             state["qc_passed"] = "YES"
