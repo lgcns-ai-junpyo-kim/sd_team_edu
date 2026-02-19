@@ -22,4 +22,4 @@ class ResponseNode:
         """
         # TODO: 최종 응답에 필요한 필드만 추려 상태를 정리한다.
         # TODO: 에러 메시지와 성공 응답의 우선순위를 정의한다.
-        raise NotImplementedError("응답 구성 로직을 구현해야 합니다.")
+        
